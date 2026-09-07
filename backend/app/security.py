@@ -1,20 +1,23 @@
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from jose import jwt
-from passlib.context import CryptContext
 
 from .config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 
 def hash_pin(pin: str) -> str:
-    return pwd_context.hash(pin)
+    return bcrypt.hashpw(pin.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_pin(pin: str, pin_hash: str) -> bool:
-    return pwd_context.verify(pin, pin_hash)
+    try:
+        return bcrypt.checkpw(pin.encode("utf-8"), pin_hash.encode("utf-8"))
+    except ValueError:
+        # Malformed/legacy hash — treat as a failed check rather than crashing.
+        return False
 
 
 def create_access_token(data: dict, expires_delta: timedelta) -> str:
